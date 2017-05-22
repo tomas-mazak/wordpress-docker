@@ -1,0 +1,52 @@
+FROM debian:stretch
+
+
+# Install Apache2 + PHP 7.0
+RUN set -ex; \
+    apt-get update; \
+    apt-get install -y apache2 libapache2-mod-php7.0 php7.0-gd php7.0-mysql \
+                       php7.0-opcache php7.0-cli curl; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/*; \
+    a2enmod rewrite expires; \
+    touch /etc/apache2/sites-available/wordpress.conf; \
+    a2dissite 000-default; \
+    a2ensite wordpress
+
+
+# Install Wordpress
+ENV WORDPRESS_VERSION 4.7.4
+ENV WORDPRESS_SHA1 153592ccbb838cafa1220de9174ec965df2e9e1a
+
+RUN set -ex; \
+	curl -o wordpress.tar.gz -fSL "https://wordpress.org/wordpress-${WORDPRESS_VERSION}.tar.gz"; \
+	echo "$WORDPRESS_SHA1 *wordpress.tar.gz" | sha1sum -c -; \
+# upstream tarballs include ./wordpress/ so this gives us /usr/src/wordpress
+	tar -xzf wordpress.tar.gz -C /var/www/; \
+	rm wordpress.tar.gz
+
+VOLUME /var/www/wordpress/wp-content/uploads
+
+
+# Install wp-cli
+ENV WPCLI_SHA 617038739c5c7102a553b6a0d22207d4aeb80b89
+RUN set -xe; \
+    curl -fsSL -o wp-cli.phar https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar; \
+    echo "${WPCLI_SHA}  wp-cli.phar" | sha1sum -c -; \
+    mv wp-cli.phar /usr/local/bin/wp; \
+    chmod +x /usr/local/bin/wp
+
+
+# Configure Apache, PHP and Wordpress
+COPY apache2-foreground /usr/local/bin/
+COPY wordpress.conf /etc/apache2/sites-available/
+COPY opcache-recommended.ini /etc/php/7.0/apache2/conf.d/
+
+
+# TODO: configure apache/wordpress settings on the first run
+COPY docker-entrypoint.sh /usr/local/bin/
+
+
+WORKDIR /var/www/wordpress
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["apache2-foreground"]
