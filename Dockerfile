@@ -21,21 +21,14 @@ ENV WORDPRESS_SHA1 153592ccbb838cafa1220de9174ec965df2e9e1a
 RUN set -ex; \
 	curl -o wordpress.tar.gz -fSL "https://wordpress.org/wordpress-${WORDPRESS_VERSION}.tar.gz"; \
 	echo "$WORDPRESS_SHA1 *wordpress.tar.gz" | sha1sum -c -; \
-# upstream tarballs include ./wordpress/ so this gives us /usr/src/wordpress
+# upstream tarballs include ./wordpress/ so this gives us /var/www/wordpress
 	tar -xzf wordpress.tar.gz -C /var/www/; \
 	rm wordpress.tar.gz
 
 VOLUME /var/www/wordpress/wp-content/uploads
 
-
-# Install wp-cli
-ENV WPCLI_SHA 617038739c5c7102a553b6a0d22207d4aeb80b89
-RUN set -xe; \
-    curl -fsSL -o wp-cli.phar https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar; \
-    echo "${WPCLI_SHA}  wp-cli.phar" | sha1sum -c -; \
-    mv wp-cli.phar /usr/local/bin/wp; \
-    chmod +x /usr/local/bin/wp
-
+# Add a themes/plugins installation wrapper script
+COPY wp-install.sh /usr/local/bin/
 
 # Configure Apache, PHP and Wordpress
 COPY apache2-foreground /usr/local/bin/
