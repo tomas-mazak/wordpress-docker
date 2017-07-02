@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN set -ex; \
     apt-get update; \
     apt-get install -y apache2 libapache2-mod-php7.0 php7.0-gd php7.0-mysql \
-                       php7.0-opcache php7.0-cli curl jq; \
+                       php7.0-opcache php7.0-cli curl jq unzip; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*; \
     a2enmod rewrite expires; \
