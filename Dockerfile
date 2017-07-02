@@ -2,10 +2,11 @@ FROM debian:stretch
 
 
 # Install Apache2 + PHP 7.0
+ENV DEBIAN_FRONTEND noninteractive
 RUN set -ex; \
     apt-get update; \
     apt-get install -y apache2 libapache2-mod-php7.0 php7.0-gd php7.0-mysql \
-                       php7.0-opcache php7.0-cli curl; \
+                       php7.0-opcache php7.0-cli curl jq; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*; \
     a2enmod rewrite expires; \
