@@ -1,0 +1,20 @@
+version: "2"
+services:
+    wordpress:
+        build: chinablog
+        environment:
+            - WORDPRESS_DB_USER=wordpress
+            - WORDPRESS_DB_PASSWORD=YIZU4G4ykio3
+            - WORDPRESS_DB_NAME=wordpress
+        depends_on:
+            - mysql
+
+    mysql:
+        image: mariadb
+        environment:
+            - MYSQL_ROOT_PASSWORD=MaHci7g2zcBN
+            - MYSQL_USER=wordpress
+            - MYSQL_PASSWORD=YIZU4G4ykio3
+            - MYSQL_DATABASE=wordpress
+        volumes:
+            - /var/lib/mysql
