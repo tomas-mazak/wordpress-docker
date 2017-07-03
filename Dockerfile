@@ -37,7 +37,7 @@ COPY wordpress.conf /etc/apache2/sites-available/
 COPY opcache-recommended.ini /etc/php/7.0/apache2/conf.d/
 
 
-# TODO: configure apache/wordpress settings on the first run
+# Configure apache/wordpress settings on the first run
 COPY docker-entrypoint.sh /usr/local/bin/
 
 
