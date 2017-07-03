@@ -1,16 +1,31 @@
 Wordpress Docker base image
 ===========================
 
-This is a base image for `immutable` Wordpress containers
+**!! THIS IS A PROOF-OF-CONCEPT REPO, DO NOT USE IN PRODUCTION !!**
 
-Describe persistent/shared information problem:
-  - uploads (just a volume so far)
-  - sessions (not yet solved)
+Use this as a base image for 'immutable' Wordpress containers. Wordpress installed in
+this image is configured not to be writable by web server. All necessary file-level
+changes must be done by extending this image (see example below).
+
+Docker hub: https://hub.docker.com/r/wigwam/wordpress/
 
 
 Example Dockerfile
 ------------------
-...
+(see examples/simple)
+```Dockerfile
+FROM wigwam/wordpress
+
+# Install a theme from wordpress.org catalogue
+RUN wp-install.sh theme zenearth
+
+# Install a plugin from wordpress.org catalogue
+RUN wp-install.sh plugin simple-lightbox
+
+# Install a custom plugin
+COPY cajwan-transcriptor /var/www/wordpress/wp-content/plugins/cajwan-transcriptor
+RUN chown -R nobody:nogroup /var/www/wordpress/wp-content/plugins/cajwan-transcriptor
+```
 
 
 Configuration variables
@@ -35,5 +50,10 @@ Findings
 
 TODO
 ----
-Scripts for adding plugins/themes using the API:
-https://dd32.id.au/projects/wordpressorg-plugin-information-api-docs/
+- Support for multi-container environment
+  - uploads (just a volume so far)
+  - sessions
+- Document configuration options
+- More examples
+  - One fully HA example in Rackspace Cloud, utilizing Docker Swarm, Cloud LB, Cloud Files, Cloud DB and Object Rocket Redis
+- Enable plugin/theme specific version installation
