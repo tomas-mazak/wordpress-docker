@@ -1,0 +1,194 @@
+---
+
+- name: Provision the cloud resources
+  hosts: localhost
+  gather_facts: False
+  handlers:
+    - name: refresh rax inventory cache
+      shell: ./rax.py --refresh-cache --list
+
+  tasks:
+    - name: create the cloud database instance
+      rax_cdb:
+        name: wp-db
+        flavor: 1
+        volume: 2
+        cdb_type: MariaDB
+        cdb_version: 10.1
+        wait: yes
+        state: present
+      register: cdb_info
+
+    - name: create the cloud DB database for Wordpress
+      rax_cdb_database:
+        cdb_id: "{{ cdb_info.cdb.id }}"
+        name: "{{ db_name }}"
+        state: present
+
+    - name: create the cloud DB user for Wordpress
+      rax_cdb_user:
+        cdb_id: "{{ cdb_info.cdb.id }}"
+        db_username: "{{ db_username }}"
+        db_password: "{{ db_password }}"
+        databases: ['{{ db_name }}']
+        state: present
+
+    - name: create the cloud network
+      rax_network:
+        label: wp-swarm
+        cidr: 192.168.97.0/24
+        state: present
+
+    - name: create the manager node server
+      rax:
+        name: wp-swarm-manager%d
+        flavor: general1-1
+        image: "Ubuntu 16.04 LTS (Xenial Xerus) (PVHVM)"
+        networks:
+          - public
+          - private
+          - wp-swarm
+        keypair: "{{ rax_keypair }}"
+        group: wp-swarm-manager
+        count: 1
+        exact_count: true
+        wait: yes
+        state: present
+      register: manager_server_info
+      notify: refresh rax inventory cache
+
+    - name: create the worker node servers
+      rax:
+        name: wp-swarm-worker%d
+        flavor: general1-1
+        image: "Ubuntu 16.04 LTS (Xenial Xerus) (PVHVM)"
+        networks:
+          - public
+          - private
+          - wp-swarm
+        keypair: "{{ rax_keypair }}"
+        group: wp-swarm-worker
+        count: 2
+        exact_count: true
+        wait: yes
+        state: present
+      register: worker_servers_info
+      notify: refresh rax inventory cache
+
+    - name: create the Cloud Load Balancer
+      rax_clb:
+        name: wp-lb
+        port: 80
+        protocol: HTTP
+        type: PUBLIC
+        wait: yes
+        state: present
+      register: clb_info
+
+    - name: add the nodes to the Cloud LB
+      rax_clb_nodes:
+        load_balancer_id: "{{ clb_info.balancer.id }}"
+        address: "{{ item }}"
+        port: 8080
+        condition: enabled
+        type: primary
+        wait: yes
+      with_items: "{{ [(manager_server_info.instances|first).rax_networks.private|first] + worker_servers_info.instances|map(attribute='rax_networks.private')|map('first')|list }}"
+
+    - meta: flush_handlers
+    - meta: refresh_inventory
+
+- name: Install and initialize docker swarm
+  hosts: wp-swarm-manager:wp-swarm-worker
+  vars:
+    ansible_user: root
+  tasks:
+    - name: add Docker apt repo key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: add Docker apt repo
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
+        state: present
+        update_cache: yes
+
+    - name: install Docker
+      apt:
+        pkg: docker-ce
+
+    - name: determine Swarm status
+      shell: "docker info | grep ^Swarm: | awk '{ print $2 }'"
+      register: swarm_status
+      check_mode: False
+      changed_when: False
+
+    - name: initialize Swarm on the manager node
+      shell: docker swarm init --advertise-addr='{{ ansible_eth2.ipv4.address }}'
+      when:
+        - swarm_status.stdout != 'active'
+        - inventory_hostname in groups['wp-swarm-manager']
+
+    - name: get the Swarm join token
+      shell: docker swarm join-token worker -q
+      register: swarm_join_token
+      changed_when: False
+      when: inventory_hostname in groups['wp-swarm-manager']
+
+    - name: make the workers join the Swarm
+      shell: docker swarm join --token '{{ hostvars[groups["wp-swarm-manager"][0]].swarm_join_token.stdout }}' '{{ hostvars[groups["wp-swarm-manager"][0]].ansible_eth2.ipv4.address }}:2377'
+      when: 
+        - swarm_status.stdout != 'active'
+        - inventory_hostname in groups['wp-swarm-worker']
+
+
+- name: Install docker-compose and spawn the service on manager node
+  hosts: wp-swarm-manager
+  vars:
+    ansible_user: root
+  handlers:
+    - name: docker-compose up
+      shell: docker-compose -f /root/docker-compose.yml up --build --no-deps
+  tasks:
+    - name: install python tools
+      apt: 
+        pkg: "{{ item }}"
+      with_items:
+        - python-pip
+        - python-virtualenv
+    
+    - name: install docker-compose
+      pip:
+        name: docker-compose
+        virtualenv: /opt/docker-compose
+        virtualenv_site_packages: yes
+
+    - name: symlink docker-compose to $PATH
+      file:
+        src: /opt/docker-compose/bin/docker-compose
+        dest: /usr/local/bin/docker-compose
+        state: link
+
+    - name: upload the Wordpress image configuration dir
+      copy:
+        src: chinablog
+        dest: /root/
+      #notify: docker-compose up
+
+    - name: upload the docker-compose.yml
+      template:
+        src: docker-compose.yml.j2
+        dest: /root/docker-compose.yml
+      #notify: docker-compose up
+
+    # TODO: 
+    # - add registry service
+    # - build image
+    # - push image
+    # - deploy service (stack)
+
+    - debug:
+        msg: 
+          - "Manage the Swarm: ssh root@{{ ansible_eth0.ipv4.address }}"
+          - "Access the website: http://{{ (hostvars.localhost.clb_info.balancer.virtual_ips|first).address }}/"

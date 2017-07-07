@@ -50,10 +50,10 @@ Findings
 
 TODO
 ----
-- Support for multi-container environment
-  - uploads (just a volume so far)
-  - sessions
+- SSL support (extra container for letsencrypt)
+- Consolidated logging
 - Document configuration options
-- More examples
-  - One fully HA example in Rackspace Cloud, utilizing Docker Swarm, Cloud LB, Cloud Files, Cloud DB and Object Rocket Redis
 - Enable plugin/theme specific version installation
+- Exlore container limits (memory, ...) options
+- Support apache2 prefork mpm config via the environment variables
+- Explore nginx/php-fpm options

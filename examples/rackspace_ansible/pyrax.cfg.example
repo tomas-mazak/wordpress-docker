@@ -1,0 +1,4 @@
+[rackspace_cloud]
+region = DFW
+username = <your_rackspace_cloud_username>
+api_key = <your_rackspace_api_key>

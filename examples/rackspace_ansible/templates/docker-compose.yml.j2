@@ -1,0 +1,23 @@
+version: "3"
+services:
+  wordpress:
+    image: 127.0.0.1:5000/chinablog
+    build: chinablog
+    environment:
+      - WORDPRESS_DB_HOST={{ hostvars.localhost.cdb_info.cdb.hostname }}
+      - WORDPRESS_DB_USER={{ db_username }}
+      - WORDPRESS_DB_PASSWORD={{ db_password }}
+      - WORDPRESS_DB_NAME={{ db_name }}
+      - WORDPRESS_AUTH_KEY=fr1u2Y5JHylOahG7
+      - WORDPRESS_SECURE_AUTH_KEY=y6TGD8xJODpRSEdV
+      - WORDPRESS_LOGGED_IN_KEY=rVCBqpOnrpCu3qsn
+      - WORDPRESS_NONCE_KEY=MVlxSflE4XRJ2eSo
+      - WORDPRESS_AUTH_SALT=R0PZtGT60aOskCpV
+      - WORDPRESS_SECURE_AUTH_SALT=Howl3me90lPl1Vd6
+      - WORDPRESS_LOGGED_IN_SALT=GWMdNNeDW7YtqyRd
+      - WORDPRESS_NONCE_SALT=f6GhavpKu4GWFieC
+    deploy:
+      mode: replicated
+      replicas: 3
+    ports:
+      - 8080:80
