@@ -55,10 +55,10 @@ environment variables (see [examples/simple/docker-compose.yml](examples/simple/
 
 Config option              | Default value     | Description
 -------------------------- | ----------------- | -----------
-APACHE_SERVER_NAME         | wordpress.local   | `ServerName` in Apache config
-APACHE_WP_ADMIN_ALLOW_FROM | all granted       | `Require` directive for `wp-admin` directory
-APACHE_XMLRPC_ALLOW_FROM   | all denied        | `Require` directive for `xmlrpc.php` file
-WORDPRESS_DB_HOST          | mysql             | `DB_HOST` constant in `wp-config.php`
+APACHE_SERVER_NAME         | wordpress.local   | `ServerName` in Apache virtual host config
+APACHE_WP_ADMIN_ALLOW_FROM | all granted       | `Require` directive for `wp-admin` directory in Apache virtual host config
+APACHE_XMLRPC_ALLOW_FROM   | all denied        | `Require` directive for `xmlrpc.php` file in Apache virtual host config
+WORDPRESS_DB_HOST          | mysql             | `DB_HOST` constant in `wp-config.php` 
 WORDPRESS_DB_USER          | root              | `DB_USER` constant in `wp-config.php`
 WORDPRESS_DB_PASSWORD      | *(empty)*         | `DB_PASSWORD` constant in `wp-config.php`
 WORDPRESS_DB_NAME          | wordpress         | `DB_NAME` constant in `wp-config.php`
